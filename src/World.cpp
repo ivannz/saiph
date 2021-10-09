@@ -89,6 +89,9 @@ const char* World::_ansi_colors[] = {
 	/* 100 */ "1;7;30", "1;7;31", "1;7;32", "1;7;33", "1;7;34", "1;7;35", "1;7;36", "1;7;37",
 };
 
+
+char _text[ROWS*COLS + 1];
+
 /* methods */
 char World::view(const Point& point) {
 	return _view[point.row()][point.col()];
@@ -169,7 +172,9 @@ action::Action* World::lastAction() {
 }
 
 std::string World::lastData() {
-	return string(_data, _data_size);
+	// return string(_data, _data_size);
+	// return string(_text, ROWS*COLS);
+	return string(_text[_cursor.row() * COLS], (ROWS-_cursor.row())*COLS);
 }
 
 int World::lastActionID() {
@@ -1280,9 +1285,12 @@ void World::fetchMenuText(int stoprow, int startcol, bool addspaces) {
 void World::fetchMessages() {
 	/* even yet a try on fetching messages sanely */
 	_question = false; // we can do this as a question max last 1 turn
-	_msg_str = &_data[_data_size - sizeof (MORE)];
+	// _msg_str = &_data[_data_size - sizeof (MORE)];
+	// _msg_str = &_text[0];
+	_msg_str = _view[_cursor.row()];
+	Debug::info() << _msg_str << endl;
 	string::size_type pos = string::npos;
-	if ((pos = _msg_str.find(MORE, 0)) != string::npos) {
+	if ((pos = _msg_str.rfind(MORE, 0)) != string::npos) {
 		/* "--More--" found */
 		_menu = false; // we don't have a menu then
 		int r = _cursor.row();
@@ -1324,6 +1332,7 @@ void World::fetchMessages() {
 		_question = true;
 		_menu = false; // no menu when we got a question
 	} else {
+		Debug::info() << _view[_cursor.row()] << endl;
 		/* --More-- not found, but we might have a menu.
 		 * this is pain */
 		if (_menu) {
@@ -1331,7 +1340,10 @@ void World::fetchMessages() {
 			_msg_str = &_view[_last_menu.row()][_last_menu.col()];
 			_cur_page = -1;
 			_max_page = -1;
-			if (_msg_str.find(END, 0) == string::npos && sscanf(&_view[_last_menu.row()][_last_menu.col()], PAGE, &_cur_page, &_max_page) != 2) {
+			if (
+				_msg_str.find(END, 0) == string::npos
+				&& sscanf(&_view[_last_menu.row()][_last_menu.col()], PAGE, &_cur_page, &_max_page) != 2
+			) {
 				/* nah, last menu is gone */
 				_menu = false;
 				_last_menu.row(-1);
@@ -1347,7 +1359,9 @@ void World::fetchMessages() {
 		}
 		if (!_menu) {
 			/* check if we got a new menu */
-			_msg_str = &_data[_data_size - sizeof (PAGE_DIRTY)];
+			// _msg_str = &_data[_data_size - sizeof (PAGE_DIRTY)];
+			_msg_str = &_text[_cursor.row()*COLS];
+			// _msg_str = _view[_cursor.row()];
 			_cur_page = -1;
 			_max_page = -1;
 			if (_msg_str.find(END, 0) != string::npos || sscanf(_msg_str.c_str(), PAGE_DIRTY, &_cur_page, &_max_page) == 2) {
@@ -1562,7 +1576,14 @@ void World::handleEscapeSequence(int* pos, int* color) {
 			}
 		}
 		if (*pos >= _data_size) {
-			Debug::error() << "Did not find stop char for sequence: " << _data << endl;
+			Debug::error()
+			<< "Did not find stop char for sequence: "
+			<< _data_size
+			<< " "
+			<< *pos
+			<< " "
+			<< _data
+			<< endl;
 			destroy();
 			exit(6);
 		}
@@ -1598,6 +1619,9 @@ void World::handleEscapeSequence(int* pos, int* color) {
 void World::update() {
 	/* update the view */
 	int charcolor = 0; // color of the char
+	// while ((_data_size = _connection->retrieve(_data, BUFFER_SIZE)) <= 0)
+	// 	sleep(1);
+	// 	// usleep(20000);
 	_data_size = _connection->retrieve(_data, BUFFER_SIZE);
 	if (_data_size <= 0) {
 		/* no data? sleep a sec and try again */
@@ -1612,7 +1636,9 @@ void World::update() {
 	/* print world & data (to cerr, for debugging)
 	 * this must be done here because if we get --More-- messages we'll update again */
 	/* also, we do this in two loops because otherwise it flickers a lot */
-	Debug::rawCharArray(_data, 0, _data_size);
+	// Debug::rawCharArray(_data, 0, _data_size);
+	memset(_text, 0, ROWS * COLS+1);
+
 	_cout_last_color = -1;
 	_cout_cursor.row(-1);
 	for (int pos = 0; pos < _data_size; ++pos) {
@@ -1660,13 +1686,21 @@ void World::update() {
 				Debug::warning() << "Fell out of the dungeon: " << _cursor.row() << ", " << _cursor.col() << endl;
 				break;
 			}
-			_view[_cursor.row()][_cursor.col()] = (unsigned char) _data[pos];
+			_text[_cursor.row() * COLS + _cursor.col()] = \
+				_view[_cursor.row()][_cursor.col()] = \
+					(unsigned char) _data[pos];
+
 			_color[_cursor.row()][_cursor.col()] = charcolor;
 			addChangedLocation(_cursor);
 			_cursor.moveEast();
 			break;
 		}
 	}
+
+	// Debug::info() << _cursor.row() << " " << _cursor.col() << endl;
+	// Debug::info() << _view[0] << endl;
+	// Debug::info() << _view[_cursor.row()] << endl;
+	// Debug::info() << _text << endl;
 
 	coutSetColor(NO_COLOR);
 	coutGoto(_cursor.row()+1, _cursor.col()+1);
@@ -1678,7 +1712,15 @@ void World::update() {
 	bool parsed_attributes = Saiph::parseAttributeRow(_view[ATTRIBUTES_ROW]);
 	bool parsed_status = Saiph::parseStatusRow(_view[STATUS_ROW], _levelname, &_turn);
 	/* check that the data we received seems ok */
-	if (!_menu && !_question && (!parsed_attributes || !parsed_status || _cursor.row() < MAP_ROW_BEGIN || _cursor.row() > MAP_ROW_END || _cursor.col() < MAP_COL_BEGIN || _cursor.col() > MAP_COL_END)) {
+	if (!_menu
+		&& !_question
+		&& (!parsed_attributes
+			|| !parsed_status
+			|| _cursor.row() < MAP_ROW_BEGIN
+			|| _cursor.row() > MAP_ROW_END
+			|| _cursor.col() < MAP_COL_BEGIN
+			|| _cursor.col() > MAP_COL_END
+	)) {
 		/* hmm, what else can it be?
 		 * could we be missing data?
 		 * this is bad, we'll lose messages, this should never happen */

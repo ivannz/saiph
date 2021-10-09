@@ -6,6 +6,7 @@
 #include "Inventory.h"
 #include "World.h"
 #include "Data/Skill.h"
+#include "Debug.h"
 
 #define MESSAGE_SPEED_GAIN1 "  You feel quick!  "
 #define MESSAGE_SPEED_GAIN2 "  You seem faster.  "
@@ -255,8 +256,14 @@ bool Saiph::parseAttributeRow(const char* attributerow) {
 
 bool Saiph::parseStatusRow(const char* statusrow, char* levelname, int* turn) {
 	/* fetch status */
-	int matched = sscanf(statusrow, "%16[^$*]%*[^:]:%d%*[^:]:%d(%d%*[^:]:%d(%d%*[^:]:%d%*[^:]:%d%*[^:]:%d%s%s%s%s%s", levelname, &_zorkmids, &_hitpoints, &_hitpoints_max, &_power, &_power_max, &_armor, &_experience, turn, _effects[0], _effects[1], _effects[2], _effects[3], _effects[4]);
-	if (matched < 9)
+	// int matched = sscanf(statusrow, "%16[^$*]%*[^:]:%d%*[^:]:%d(%d%*[^:]:%d(%d%*[^:]:%d%*[^:]:%d%*[^:]:%d%s%s%s%s%s", levelname, &_zorkmids, &_hitpoints, &_hitpoints_max, &_power, &_power_max, &_armor, &_experience, turn, _effects[0], _effects[1], _effects[2], _effects[3], _effects[4]);
+	// if (matched < 9)
+	int matched = sscanf(statusrow, "%16[^$*]%*[^:]:%d%*[^:]:%d(%d%*[^:]:%d(%d%*[^:]:%d%*[^:]:%d%*[^:]%s%s%s%s%s", levelname, &_zorkmids, &_hitpoints, &_hitpoints_max, &_power, &_power_max, &_armor, &_experience, _effects[0], _effects[1], _effects[2], _effects[3], _effects[4]);
+
+	// XXX potentially problematic
+	*turn = 1;
+
+	if (matched < 8)
 		return false;
 	_encumbrance = UNENCUMBERED;
 	_hunger = CONTENT;

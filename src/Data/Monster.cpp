@@ -13,7 +13,58 @@ vector<const Monster*> Monster::_monsters;
 map<const string, int> Monster::_monster_name_mapping;
 
 /* protected constructors */
-Monster::Monster(const string& name, const unsigned char& symbol, int difficulty, int move_rate, int ac, int magic_resistance, int alignment, int geno_flags, const Attack& a0, const Attack& a1, const Attack& a2, const Attack& a3, const Attack& a4, const Attack& a5, int weight, int nutrition, int extension, int sounds, int size, int resistances, int resistances_conferred, int m1, int m2, int m3, int color) : _name(name), _symbol(symbol), _difficulty(difficulty), _move_rate(move_rate), _ac(ac), _magic_resistance(magic_resistance), _alignment(alignment), _geno_flags(geno_flags), _weight(weight), _nutrition(nutrition), _extension(extension), _sounds(sounds), _size(size), _resistances(resistances), _resistances_conferred(resistances_conferred), _m1(m1), _m2(m2), _m3(m3), _color(color), _ignores_elbereth((symbol == S_HUMAN || symbol == S_ANGEL || name == "minotaur" || name == "Death" || name == "Pestilence" || name == "Famine")) {
+Monster::Monster(
+	const string& name,
+	const unsigned char& symbol,
+	int difficulty,
+	int move_rate,
+	int ac,
+	int magic_resistance,
+	int alignment,
+	int geno_flags,
+	const Attack& a0,
+	const Attack& a1,
+	const Attack& a2,
+	const Attack& a3,
+	const Attack& a4,
+	const Attack& a5,
+	int weight,
+	int nutrition,
+	int extension,
+	int sounds,
+	int size,
+	int resistances,
+	int resistances_conferred,
+	int m1,
+	int m2,
+	int m3,
+	int color) : _name(name),
+		_symbol(symbol),
+		_difficulty(difficulty),
+		_move_rate(move_rate),
+		_ac(ac),
+		_magic_resistance(magic_resistance),
+		_alignment(alignment),
+		_geno_flags(geno_flags),
+		_weight(weight),
+		_nutrition(nutrition),
+		_extension(extension),
+		_sounds(sounds),
+		_size(size),
+		_resistances(resistances),
+		_resistances_conferred(resistances_conferred),
+		_m1(m1),
+		_m2(m2),
+		_m3(m3),
+		_color(color),
+		_ignores_elbereth(
+			(symbol == S_HUMAN
+			|| symbol == S_ANGEL
+			|| name == "minotaur"
+			|| name == "Death"
+			|| name == "Pestilence"
+			|| name == "Famine")
+		) {
 	_attacks.push_back(a0);
 	_attacks.push_back(a1);
 	_attacks.push_back(a2);
@@ -56,7 +107,32 @@ void Monster::init() {
 			_monster_symbol_mapping[a][b] = -1;
 	}
 	/* push all monster data to vector */
-	_monsters.push_back(new Monster("giant ant", S_ANT, 2, 18, 3, 0, 0, (G_GENO | G_SGROUP | 3), Attack(AT_BITE, AD_PHYS, 1, 4), Attack(), Attack(), Attack(), Attack(), Attack(), 10, 10, 0, MS_SILENT, MZ_TINY, 0, 0, M1_ANIMAL | M1_NOHANDS | M1_OVIPAROUS | M1_CARNIVORE, M2_HOSTILE, 0, YELLOW));
+	_monsters.push_back(new Monster(
+		"giant ant",
+		S_ANT,
+		2,
+		18,
+		3,
+		0,
+		0,
+		(G_GENO | G_SGROUP | 3),
+		Attack(AT_BITE, AD_PHYS, 1, 4),
+		Attack(),
+		Attack(),
+		Attack(),
+		Attack(),
+		Attack(),
+		10,
+		10,
+		0,
+		MS_SILENT,
+		MZ_TINY,
+		0,
+		0,
+		M1_ANIMAL | M1_NOHANDS | M1_OVIPAROUS | M1_CARNIVORE,
+		M2_HOSTILE,
+		0,
+		YELLOW));
 	_monsters.push_back(new Monster("killer bee", S_ANT, 1, 18, -1, 0, 0, (G_GENO | G_LGROUP | 2), Attack(AT_STNG, AD_DRST, 1, 3), Attack(), Attack(), Attack(), Attack(), Attack(), 1, 5, 0, MS_BUZZ, MZ_TINY, MR_POISON, MR_POISON, M1_ANIMAL | M1_FLY | M1_NOHANDS | M1_POIS, M2_HOSTILE | M2_FEMALE, 0, BOLD_YELLOW));
 	_monsters.push_back(new Monster("soldier ant", S_ANT, 3, 18, 3, 0, 0, (G_GENO | G_SGROUP | 2), Attack(AT_BITE, AD_PHYS, 2, 4), Attack(AT_STNG, AD_DRST, 3, 4), Attack(), Attack(), Attack(), Attack(), 20, 5, 0, MS_SILENT, MZ_TINY, MR_POISON, MR_POISON, M1_ANIMAL | M1_NOHANDS | M1_OVIPAROUS | M1_POIS | M1_CARNIVORE, M2_HOSTILE, 0, BLUE));
 	_monsters.push_back(new Monster("fire ant", S_ANT, 3, 18, 3, 10, 0, (G_GENO | G_SGROUP | 1), Attack(AT_BITE, AD_PHYS, 2, 4), Attack(AT_BITE, AD_FIRE, 2, 4), Attack(), Attack(), Attack(), Attack(), 30, 10, 0, MS_SILENT, MZ_TINY, MR_FIRE, MR_FIRE, M1_ANIMAL | M1_NOHANDS | M1_OVIPAROUS | M1_CARNIVORE, M2_HOSTILE, M3_INFRAVISIBLE, RED));
@@ -97,7 +173,32 @@ void Monster::init() {
 	_monsters.push_back(new Monster("tiger", S_FELINE, 6, 12, 6, 0, 0, (G_GENO | 2), Attack(AT_CLAW, AD_PHYS, 2, 4), Attack(AT_CLAW, AD_PHYS, 2, 4), Attack(AT_BITE, AD_PHYS, 1, 10), Attack(), Attack(), Attack(), 600, 300, 0, MS_GROWL, MZ_LARGE, 0, 0, M1_ANIMAL | M1_NOHANDS | M1_CARNIVORE, M2_HOSTILE, M3_INFRAVISIBLE, BOLD_YELLOW));
 	_monsters.push_back(new Monster("gremlin", S_GREMLIN, 5, 12, 2, 25, -9, (G_GENO | 2), Attack(AT_CLAW, AD_PHYS, 1, 6), Attack(AT_CLAW, AD_PHYS, 1, 6), Attack(AT_BITE, AD_PHYS, 1, 4), Attack(AT_CLAW, AD_CURS, 0, 0), Attack(), Attack(), 100, 20, 0, MS_LAUGH, MZ_SMALL, MR_POISON, MR_POISON, M1_SWIM | M1_HUMANOID | M1_POIS, M2_STALK, M3_INFRAVISIBLE, GREEN));
 	_monsters.push_back(new Monster("gargoyle", S_GREMLIN, 6, 10, -4, 0, -9, (G_GENO | 2), Attack(AT_CLAW, AD_PHYS, 2, 6), Attack(AT_CLAW, AD_PHYS, 2, 6), Attack(AT_BITE, AD_PHYS, 2, 4), Attack(), Attack(), Attack(), 1000, 200, 0, MS_GRUNT, MZ_HUMAN, MR_STONE, MR_STONE, M1_HUMANOID | M1_THICK_HIDE | M1_BREATHLESS, M2_HOSTILE | M2_STRONG, 0, YELLOW));
-	_monsters.push_back(new Monster("winged gargoyle", S_GREMLIN, 9, 15, -2, 0, -12, (G_GENO | 1), Attack(AT_CLAW, AD_PHYS, 3, 6), Attack(AT_CLAW, AD_PHYS, 3, 6), Attack(AT_BITE, AD_PHYS, 3, 4), Attack(), Attack(), Attack(), 1200, 300, 0, MS_GRUNT, MZ_HUMAN, MR_STONE, MR_STONE, M1_FLY | M1_HUMANOID | M1_THICK_HIDE | M1_BREATHLESS | M1_OVIPAROUS, M2_LORD | M2_HOSTILE | M2_STRONG | M2_MAGIC, 0, MAGENTA));
+	_monsters.push_back(new Monster(
+		"winged gargoyle",
+		S_GREMLIN,
+		9,
+		15,
+		-2,
+		0,
+		-12,
+		(G_GENO | 1),
+		Attack(AT_CLAW, AD_PHYS, 3, 6),
+		Attack(AT_CLAW, AD_PHYS, 3, 6),
+		Attack(AT_BITE, AD_PHYS, 3, 4),
+		Attack(),
+		Attack(),
+		Attack(),
+		1200,
+		300,
+		0,
+		MS_GRUNT,
+		MZ_HUMAN,
+		MR_STONE,
+		MR_STONE,
+		M1_FLY | M1_HUMANOID | M1_THICK_HIDE | M1_BREATHLESS | M1_OVIPAROUS,
+		M2_LORD | M2_HOSTILE | M2_STRONG | M2_MAGIC,
+		0,
+		MAGENTA));
 	_monsters.push_back(new Monster("hobbit", S_HUMANOID, 1, 9, 10, 0, 6, (G_GENO | 2), Attack(AT_WEAP, AD_PHYS, 1, 6), Attack(), Attack(), Attack(), Attack(), Attack(), 500, 200, 0, MS_HUMANOID, MZ_SMALL, 0, 0, M1_HUMANOID | M1_OMNIVORE, M2_COLLECT, M3_INFRAVISIBLE | M3_INFRAVISION, GREEN));
 	_monsters.push_back(new Monster("dwarf", S_HUMANOID, 2, 6, 10, 10, 4, (G_GENO | 3), Attack(AT_WEAP, AD_PHYS, 1, 8), Attack(), Attack(), Attack(), Attack(), Attack(), 900, 300, 0, MS_HUMANOID, MZ_HUMAN, 0, 0, M1_TUNNEL | M1_NEEDPICK | M1_HUMANOID | M1_OMNIVORE, M2_NOPOLY | M2_DWARF | M2_STRONG | M2_GREEDY | M2_JEWELS | M2_COLLECT, M3_INFRAVISIBLE | M3_INFRAVISION, RED));
 	_monsters.push_back(new Monster("bugbear", S_HUMANOID, 3, 9, 5, 0, -6, (G_GENO | 1), Attack(AT_WEAP, AD_PHYS, 2, 4), Attack(), Attack(), Attack(), Attack(), Attack(), 1250, 250, 0, MS_GROWL, MZ_LARGE, 0, 0, M1_HUMANOID | M1_OMNIVORE, M2_STRONG | M2_COLLECT, M3_INFRAVISIBLE | M3_INFRAVISION, YELLOW));
@@ -468,7 +569,7 @@ const Monster* Monster::monster(const unsigned char& symbol, int color) {
 }
 
 const Monster* Monster::monster(const string& name) {
-	map<string, int>::iterator m = _monster_name_mapping.find(name);
+	map<const string, int>::iterator m = _monster_name_mapping.find(name);
 	if (m == _monster_name_mapping.end())
 		return NULL;
 	return monster(m->second);

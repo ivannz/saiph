@@ -10,6 +10,8 @@
 #include "Telnet.h"
 #include "World.h"
 
+#include <unistd.h>
+
 using namespace std;
 
 /* constructors/destructor */
