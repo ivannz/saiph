@@ -20,7 +20,7 @@
 using namespace std;
 
 /* constructors/destructor */
-Local::Local() : _unanswered_chars(1), _synchronous(0) {
+Local::Local() : _unanswered_chars(1), _synchronous(1) {
 	/* set up pipes */
 	if (pipe(_link) < 0) {
 		Debug::error() << "Plumbing failed" << endl;
@@ -65,7 +65,13 @@ Local::Local() : _unanswered_chars(1), _synchronous(0) {
 		int result;
 		setenv("TERM", "xterm", 1);
 		setenv("SAIPH_INLINE_SYNC", "1", 1);
-		result = execl("/bin/sh", "sh", "-c", LOCAL_NETHACK, NULL);
+		// result = execl("/bin/sh", "sh", "-c", LOCAL_NETHACK, NULL);
+		result = execl(
+			"/Users/ivannazarov/miniconda3/envs/py39/bin/python",
+			"python",
+			"../pynle.py",
+			NULL);
+
 		if (result < 0) {
 			Debug::error() << "Unable to enter the dungeon" << endl;
 			World::destroy();
@@ -101,7 +107,9 @@ int Local::doRetrieve(char* buffer, int count) {
 	ssize_t data_received = 0;
 	ssize_t amount;
 	if (_synchronous > 0) {
+		Debug::info() << "sync recv" << std::endl;
 		do {
+			usleep(20000);
 			amount = read(_link[0], &buffer[data_received], count - data_received - 2);
 			if (amount > 0) {
 				int th = removeThorns(&buffer[data_received], amount);
@@ -109,12 +117,17 @@ int Local::doRetrieve(char* buffer, int count) {
 				_unanswered_chars -= th;
 				data_received += amount;
 			}
-		} while (amount > 0 && _unanswered_chars);
+		} while (amount > 1023 && _unanswered_chars);
+		Debug::info() << "end" << std::endl;
+
 	} else {
 		/* make reading blocking */
-		//fcntl(link[0], F_SETFL, fcntl(link[0], F_GETFL) & ~O_NONBLOCK);
+		Debug::info() << "async recv" << std::endl;
+		// Debug::info() << (long)fcntl( _link[0], F_GETPIPE_SZ ) << std::endl;
+
+		// fcntl(_link[0], F_SETFL, fcntl(_link[0], F_GETFL) & ~O_NONBLOCK);
 		/* read 8 bytes, this will block until there's data available */
-		//data_received += read(link[0], buffer, 8);
+		// data_received += read(_link[0], buffer, 8);
 		/* make reading non-blocking */
 		fcntl(_link[0], F_SETFL, fcntl(_link[0], F_GETFL) | O_NONBLOCK);
 		/* usleep some ms here (after the blocked reading) both to
@@ -124,6 +137,7 @@ int Local::doRetrieve(char* buffer, int count) {
 		do {
 			amount = read(_link[0], &buffer[data_received], count - data_received - 2);
 			if (amount > 0)
+				Debug::info() << amount << std::endl;
 				data_received += amount;
 		} while (amount > 1000 && !(amount & (amount + 1))); // power of 2 test
 		if (data_received > 0) {
@@ -137,6 +151,7 @@ int Local::doRetrieve(char* buffer, int count) {
 			}
 		}
 	}
+	Debug::info() << "end " << data_received << " " << count << std::endl;
 	if (data_received < (ssize_t) count)
 		buffer[data_received] = '\0';
 	return (int) data_received;
@@ -153,5 +168,5 @@ void Local::start() {
 }
 
 void Local::stop() {
-	transmit("Sy"); // save & quit
+	// transmit("Sy"); // save & quit  XXX do not save
 }
