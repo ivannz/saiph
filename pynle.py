@@ -1,3 +1,4 @@
+import re
 import gym
 import nle
 import time
@@ -48,7 +49,8 @@ def render(tty_colors, tty_chars, tty_cursor, **ignore):
     r, c = tty_cursor
 
     rows, cols = tty_chars.shape
-    ansi = '\033[1;1H\033[2J'
+    # ansi = '\033[1;1H\033[2J'
+    ansi = '\033[1;1H'
     for i in range(rows):
         for j in range(cols):
             cl, ch = tty_colors[i, j], tty_chars[i, j]
@@ -68,9 +70,10 @@ def render(tty_colors, tty_chars, tty_cursor, **ignore):
     return ansi
 
 
-def rebuild_tty_chars(obs):
+def rebuild_tty_chars(obs, *, turn=False):
     """Restore broken `tty_chars` in case of mutliline message with `--More--`.
     """
+    obs = {n: np.copy(v) for n, v in obs.items()}
 
     misc = Misc(*obs['misc'].astype(bool))
     message = obs['message'].view('S256')[0].decode('ascii')
@@ -98,6 +101,18 @@ def rebuild_tty_chars(obs):
         message = obs['message']  # take uint8 original
         obs['message'] = np.where(message == 0x0A, 0x20, message)
 
+    if turn:
+        # graft the turn counter into thesecond bottom line
+        blstats = BLStats(*obs['blstats'])
+        btl = obs['tty_chars'].view('S80')
+        line = re.sub(
+            r"(.*\s+Xp:\d+/\d+)(?:\s+)(.*)$",
+            rf"\1 T:{blstats.time} \2",
+            btl[-1, 0].decode('ascii'),
+            re.I,
+        )
+        btl[-1, 0] = bytes(f'{line:<80s}', encoding='ascii')
+
     return obs
 
 
@@ -112,7 +127,6 @@ def dump(log, obs):
     # log stuff
     log.write("`" + message + "`\n")
     log.write(pp.pformat(dict(bls=bls._asdict(), msc=msc._asdict())) + '\n')
-    log.write(f'sent {len(render(**obs)):d} to stdout:\n')
     log.write((b'\n'.join(map(bytes, obs['tty_chars']))).decode('ascii') + '\n')
     log.write("-"*80 + "\n\n")
     log.flush()
@@ -124,11 +138,11 @@ def main(log, *, seed=None, no_buffer=False):
         gym.make('NetHackChallenge-v0'),  # XXX saiph needs options!
         folder='./replays',
         save_on='done',
+        sticky=True,  # do not reset seed if `auto`
     ) as env:
         env.seed(seed=None if seed is None else tuple(seed))
-
         log.write(
-            f"python pynle.py --seed {' '.join(map(str, env._seed))}\n\n"
+            f"python ../pynle.py --seed {' '.join(map(str, env._seed))}\n\n"
         )
 
         # XXX disable the state machine by initting to `-1`.
@@ -173,6 +187,7 @@ def main(log, *, seed=None, no_buffer=False):
             #  the while loop, because of the `continue` statements in
             #  the extcmd buffering state machine.
             obs = rebuild_tty_chars(obs)
+            log.write(f'sent {len(render(**obs)):d} to stdout\n')
 
             dump(log, obs)
 
