@@ -94,6 +94,7 @@ def rebuild_tty_chars(obs):
         obs['tty_chars'] = screen
 
         # fix the message: replace '\n' (\x0a) with space ` ` (\x20)
+        message = obs['message']  # take uint8 original
         obs['message'] = np.where(message == 0x0A, 0x20, message)
 
     return obs
