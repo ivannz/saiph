@@ -28,6 +28,7 @@ try:
 
 except ImportError:
     class _Getch:
+        """Gets a single input from stdin."""
         def __call__(self):
             import sys
             import tty
@@ -100,7 +101,24 @@ def rebuild_tty_chars(obs):
     return obs
 
 
-def main(log, *, seed=None):
+def dump(log, obs):
+    # some flags and computed fields
+    message = obs['message'].view('S256')[0].decode('ascii')
+    msc = Misc(*obs['misc'].astype(bool))
+
+    # NB NLE does no report game turn counter in the bottom line stats
+    bls = BLStats(*obs['blstats'])
+
+    # log stuff
+    log.write("`" + message + "`\n")
+    log.write(pp.pformat(dict(bls=bls._asdict(), msc=msc._asdict())) + '\n')
+    log.write(f'sent {len(render(**obs)):d} to stdout:\n')
+    log.write((b'\n'.join(map(bytes, obs['tty_chars']))).decode('ascii') + '\n')
+    log.write("-"*80 + "\n\n")
+    log.flush()
+
+
+def main(log, *, seed=None, no_buffer=False):
     getch = _Getch()
     with ReplayToFile(
         gym.make('NetHackChallenge-v0'),  # XXX saiph needs options!
@@ -109,56 +127,54 @@ def main(log, *, seed=None):
     ) as env:
         env.seed(seed=None if seed is None else tuple(seed))
 
-        log.write("python pynle.py --seed " + ' '.join(map(str, env._seed)) + '\n')
+        log.write(
+            f"python pynle.py --seed {' '.join(map(str, env._seed))}\n\n"
+        )
 
         # XXX disable the state machine by initting to `-1`.
-        state, buffer = 0, deque([])
+        state = -1 if no_buffer else 0
 
         chr2id = {chr(act.value): i for i, act in enumerate(env.unwrapped._actions)}
-        obs, done = env.reset(), False
+        obs, done, buffer = env.reset(), False, deque([])
+
+        # slightly unrolling the loop due to the nonlinear branching logic
+        #  inside. Ideally we would goto straight into its last block.
+        render(**rebuild_tty_chars(obs))
         while not done:
-            obs = rebuild_tty_chars(obs)
-
-            # some flags and computed fields
-            message = obs['message'].view('S256')[0].decode('ascii')
-            msc = Misc(*obs['misc'].astype(bool))
-
-            # NB NLE does no report game turn counter in the bottom line stats.
-            bls = BLStats(*obs['blstats'])
-
-            # log stuff
-            log.write(f"{state=} `{message=}`\n")
-            log.write(pp.pformat(dict(bls=bls._asdict(), msc=msc._asdict())) + '\n')
-            log.write(f'sent {len(render(**obs)):d} to stdout:\n')
-            log.write((b'\n'.join(map(bytes, obs['tty_chars']))).decode('ascii') + '\n')
-
-            log.flush()
-
-            # recv character from term
+            # buffer the received input from stdin
             action = getch()
             action = '\r' if action == '\n' else action
-
             buffer.append(action)
 
-            # case 1: an extended command r"#\w+[\015\033]"
+            # binary-state machine for extended commands r"#\w+[\015\033]"
             if state == 0:
+                # we got a hastag: buffer input until an ESC or RET
                 if action == '#':
                     state = 1
                     continue
 
             elif state == 1:
+                # terminal state
                 if action not in ('\033', '\015'):
                     continue
 
                 state = 0
 
-            assert state <= 0  # can use -1 to disable buffering
+            if state > 0:
+                raise RuntimeError(f'Invalid state for `{buffer}`')
 
             # buffer is ready
             log.write(">>>>> Taking " + repr(tuple(buffer))[1:-1] + "\n")
             while buffer:
                 action = buffer.popleft()
                 obs, reward, done, info = env.step(chr2id[action])
+
+            # it is important the we render HERE, and not at the top of
+            #  the while loop, because of the `continue` statements in
+            #  the extcmd buffering state machine.
+            obs = rebuild_tty_chars(obs)
+
+            dump(log, obs)
 
 
 if __name__ == '__main__':
@@ -173,7 +189,12 @@ if __name__ == '__main__':
         help='The seed pair to use. Ignore for unseeded run.',
     )
 
-    parser.set_defaults(seed=None)
+    parser.add_argument(
+        '--no-buffer', required=False, dest='no_buffer', action='store_true',
+        help='Disable tty buffering for extended commands.',
+    )
+
+    parser.set_defaults(seed=None, no_buffer=False)
     args, _ = parser.parse_known_args()
 
     with open('log.txt', 'wt') as log:
