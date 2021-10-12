@@ -468,7 +468,7 @@ const Monster* Monster::monster(const unsigned char& symbol, int color) {
 }
 
 const Monster* Monster::monster(const string& name) {
-	map<string, int>::iterator m = _monster_name_mapping.find(name);
+	map<const string, int>::iterator m = _monster_name_mapping.find(name);
 	if (m == _monster_name_mapping.end())
 		return NULL;
 	return monster(m->second);
